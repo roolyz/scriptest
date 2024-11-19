@@ -16,7 +16,7 @@ local Tabs = {
     ESP = Window:AddTab({ Title = "ESP", Icon = "" }),
     Aimbot = Window:AddTab({ Title = "Aimbot", Icon = "" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
-}
+})
 
 local espEnabled = false
 local espColor = Color3.fromRGB(255, 0, 0)
@@ -25,7 +25,7 @@ local espTeamCheck = true
 local aimbotEnabled = false
 local aimbotSmoothing = 0.5
 local aimbotTargetPart = "Head"
-local aimbotRadius = 100
+local aimbotRadius = 30
 local showFOV = true
 local fovColor = Color3.fromRGB(0, 255, 0)
 
@@ -179,7 +179,7 @@ Tabs.Aimbot:AddSlider("AimbotSmoothing", {
 
 Tabs.Aimbot:AddSlider("AimbotRadius", {
     Title = "Aimbot Radius",
-    Min = 50,
+    Min = 1,
     Max = 100,
     Default = aimbotRadius,
     Rounding = 0,
