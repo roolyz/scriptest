@@ -4,8 +4,8 @@ local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.
 
 -- Create the Fluent Window
 local Window = Fluent:CreateWindow({
-    Title = "Game Utility Script",
-    SubTitle = "by dawid",
+    Title = "Universal FPS Script",
+    SubTitle = "by Reminisense",
     TabWidth = 140,
     Size = UDim2.fromOffset(450, 400),
     Acrylic = true,
@@ -30,6 +30,29 @@ local aimbotEnabled = false
 local aimbotSmoothing = 0.5
 local aimbotTargetPart = "Head"
 local aimbotRadius = 100 -- Default targeting radius (in studs)
+local showFOV = true
+
+-- FOV Circle
+local fovCircle = Drawing.new("Circle")
+fovCircle.Visible = false
+fovCircle.Transparency = 1
+fovCircle.Thickness = 2
+fovCircle.Color = Color3.fromRGB(0, 255, 0) -- Default Green
+fovCircle.Filled = false
+
+-- Update FOV Circle
+local function updateFOVCircle()
+    fovCircle.Visible = showFOV
+    fovCircle.Radius = aimbotRadius
+    fovCircle.Position = Vector2.new(game.Players.LocalPlayer:GetMouse().X, game.Players.LocalPlayer:GetMouse().Y)
+end
+
+-- Continuously Update FOV Circle Position
+game:GetService("RunService").RenderStepped:Connect(function()
+    if showFOV then
+        updateFOVCircle()
+    end
+end)
 
 -- Function to get the closest enemy within the aimbot radius
 local function getClosestEnemy()
@@ -43,8 +66,10 @@ local function getClosestEnemy()
             local character = player.Character
             if character and character:FindFirstChild(aimbotTargetPart) then
                 local part = character[aimbotTargetPart]
-                local distance = (part.Position - mouseLocation).Magnitude
-                if distance < shortestDistance then
+                local screenPoint, onScreen = game.Workspace.CurrentCamera:WorldToScreenPoint(part.Position)
+                local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - Vector2.new(mouseLocation.X, mouseLocation.Y)).Magnitude
+
+                if distance < shortestDistance and onScreen then
                     shortestDistance = distance
                     closestEnemy = part
                 end
@@ -72,35 +97,6 @@ end
 
 -- Connect the aimbot functionality to render step
 game:GetService("RunService").RenderStepped:Connect(aimbotStep)
-
--- ESP Updater
-task.spawn(function()
-    while task.wait(0.1) do
-        if espEnabled then
-            for _, player in ipairs(game.Players:GetPlayers()) do
-                local character = player.Character
-                if character and character:FindFirstChild("HumanoidRootPart") then
-                    local isEnemy = (player.Team ~= game.Players.LocalPlayer.Team) or not espTeamCheck
-                    local highlight = character:FindFirstChildOfClass("Highlight")
-
-                    if espEnabled and isEnemy then
-                        if not highlight then
-                            highlight = Instance.new("Highlight")
-                            highlight.Name = "ESPHighlight"
-                            highlight.Parent = character
-                        end
-                        highlight.FillColor = espColor
-                        highlight.OutlineColor = Color3.new(1, 1, 1) -- White outline
-                        highlight.FillTransparency = 0.5
-                        highlight.OutlineTransparency = 0
-                    elseif highlight then
-                        highlight:Destroy()
-                    end
-                end
-            end
-        end
-    end
-end)
 
 -- ESP Tab Elements
 Tabs.ESP:AddToggle("EnableESP", {
@@ -171,6 +167,7 @@ Tabs.Aimbot:AddSlider("AimbotRadius", {
     Rounding = 0,
     Callback = function(value)
         aimbotRadius = value
+        fovCircle.Radius = value
         print("Aimbot Radius Changed:", value)
     end
 })
@@ -182,6 +179,16 @@ Tabs.Aimbot:AddDropdown("TargetPart", {
     Callback = function(part)
         aimbotTargetPart = part
         print("Aimbot Target Part Changed:", part)
+    end
+})
+
+Tabs.Aimbot:AddToggle("ShowFOV", {
+    Title = "Show FOV Circle",
+    Default = true,
+    Callback = function(state)
+        showFOV = state
+        fovCircle.Visible = state
+        print("Show FOV Circle:", state)
     end
 })
 
