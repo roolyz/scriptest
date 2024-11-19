@@ -2,12 +2,12 @@ local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
--- Create the Fluent Window
+-- Create Fluent Window
 local Window = Fluent:CreateWindow({
     Title = "Enemy Highlighter",
     SubTitle = "by dawid",
     TabWidth = 140,
-    Size = UDim2.fromOffset(450, 320), -- Mobile-friendly size
+    Size = UDim2.fromOffset(450, 320),
     Acrylic = true,
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.LeftControl -- Default keybind
@@ -18,45 +18,60 @@ local Tabs = {
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
--- Variables
-local highlightEnabled = false
-local highlightColor = Color3.fromRGB(255, 0, 0) -- Default Red
-local teamCheck = true
+-- Floating Virtual Keybind Button
+local playerGui = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "VirtualKeybindGUI"
+screenGui.Parent = playerGui
 
--- Function to manage highlights
-local function applyHighlights()
-    for _, player in ipairs(game.Players:GetPlayers()) do
-        if player ~= game.Players.LocalPlayer then
-            local character = player.Character
-            if character and character:FindFirstChild("HumanoidRootPart") then
-                local isEnemy = (player.Team ~= game.Players.LocalPlayer.Team) or not teamCheck
-                local highlight = character:FindFirstChildOfClass("Highlight")
+-- Floating Button Properties
+local virtualKeybindButton = Instance.new("TextButton")
+virtualKeybindButton.Name = "KeybindToggleButton"
+virtualKeybindButton.Size = UDim2.new(0, 80, 0, 80) -- Button size
+virtualKeybindButton.Position = UDim2.new(0.5, -40, 0.05, 0) -- Center-top of the screen
+virtualKeybindButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+virtualKeybindButton.Text = "☰" -- Menu icon
+virtualKeybindButton.TextScaled = true
+virtualKeybindButton.Font = Enum.Font.SourceSansBold
+virtualKeybindButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+virtualKeybindButton.Parent = screenGui
+virtualKeybindButton.ZIndex = 10 -- Ensure visibility
 
-                if highlightEnabled and isEnemy then
-                    if not highlight then
-                        highlight = Instance.new("Highlight")
-                        highlight.Name = "EnemyHighlight"
-                        highlight.Parent = character
-                    end
-                    highlight.FillColor = highlightColor
-                    highlight.OutlineColor = Color3.new(1, 1, 1) -- White outline
-                    highlight.FillTransparency = 0.5
-                    highlight.OutlineTransparency = 0
-                elseif highlight then
-                    highlight:Destroy()
-                end
-            end
-        end
-    end
+-- Make Button Draggable
+local dragStart, startPos
+local dragging = false
+local function updateInput(input)
+    local delta = input.Position - dragStart
+    virtualKeybindButton.Position = UDim2.new(
+        startPos.X.Scale,
+        startPos.X.Offset + delta.X,
+        startPos.Y.Scale,
+        startPos.Y.Offset + delta.Y
+    )
 end
 
--- Highlight updater (runs continuously)
-task.spawn(function()
-    while task.wait(0.1) do
-        if highlightEnabled then
-            applyHighlights()
-        end
+virtualKeybindButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = virtualKeybindButton.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
     end
+end)
+
+virtualKeybindButton.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        updateInput(input)
+    end
+end)
+
+-- Toggle GUI Visibility on Button Click
+virtualKeybindButton.MouseButton1Click:Connect(function()
+    Window:SetVisible(not Window:GetVisible())
 end)
 
 -- GUI Elements
@@ -66,7 +81,6 @@ Tabs.Main:AddToggle("EnableHighlight", {
     Callback = function(state)
         highlightEnabled = state
         if not state then
-            -- Remove highlights when disabled
             for _, player in ipairs(game.Players:GetPlayers()) do
                 local character = player.Character
                 if character then
@@ -96,31 +110,6 @@ Tabs.Main:AddToggle("TeamCheck", {
     end
 })
 
--- Mobile Squircle Button
-local playerGui = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "ToggleButtonGUI"
-screenGui.Parent = playerGui
-
-local squircleButton = Instance.new("ImageButton")
-squircleButton.Name = "SquircleKeybindButton"
-squircleButton.Size = UDim2.new(0, 50, 0, 50) -- Squircle size
-squircleButton.Position = UDim2.new(0.05, 0, 0.05, 0) -- Top-left corner
-squircleButton.BackgroundTransparency = 1
-squircleButton.Image = "rbxassetid://7072719258" -- Squircle icon (replace with any asset ID)
-squircleButton.Parent = screenGui
-
-squircleButton.MouseButton1Click:Connect(function()
-    Window:SetVisible(not Window:GetVisible())
-end)
-
--- Notification for GUI Load
-Fluent:Notify({
-    Title = "Enemy Highlighter",
-    Content = "Script Loaded Successfully!",
-    Duration = 5
-})
-
 -- SaveManager and InterfaceManager Setup
 SaveManager:SetLibrary(Fluent)
 InterfaceManager:SetLibrary(Fluent)
@@ -136,3 +125,10 @@ SaveManager:LoadAutoloadConfig()
 
 -- Finalize GUI
 Window:SelectTab(1)
+
+-- Notify user
+Fluent:Notify({
+    Title = "Enemy Highlighter",
+    Content = "Script Loaded Successfully! Use ☰ button to toggle GUI.",
+    Duration = 5
+})
