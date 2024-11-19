@@ -18,8 +18,9 @@ local Tabs = {
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
+-- Variables
 local espEnabled = false
-local espColor = Color3.fromRGB(255, 0, 0)
+local espColor = Color3.fromRGB(255, 0, 0) -- Default Red
 local espTeamCheck = true
 
 local aimbotEnabled = false
@@ -27,12 +28,13 @@ local aimbotSmoothing = 0.5
 local aimbotTargetPart = "Head"
 local aimbotRadius = 100 -- Default targeting radius (in studs)
 local showFOV = true
+local fovCircleColor = Color3.fromRGB(0, 255, 0) -- Default Green
 
 local fovCircle = Drawing.new("Circle")
 fovCircle.Visible = false
 fovCircle.Transparency = 1
 fovCircle.Thickness = 2
-fovCircle.Color = Color3.fromRGB(0, 255, 0)
+fovCircle.Color = fovCircleColor
 fovCircle.Filled = false
 
 local function updateFOVCircle()
@@ -49,6 +51,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
     end
 end)
 
+-- Highlighting Functionality for ESP
 local function createHighlight(player)
     if not espEnabled or (espTeamCheck and player.Team == game.Players.LocalPlayer.Team) then
         return
@@ -82,6 +85,7 @@ game.Players.PlayerRemoving:Connect(function(player)
     end
 end)
 
+-- Get Closest Enemy
 local function getClosestEnemy()
     local localPlayer = game.Players.LocalPlayer
     local camera = game.Workspace.CurrentCamera
@@ -108,6 +112,7 @@ local function getClosestEnemy()
     return closestEnemy
 end
 
+-- Aimbot Logic
 local function aimbotStep()
     if aimbotEnabled then
         local closestEnemy = getClosestEnemy()
@@ -122,6 +127,7 @@ end
 
 game:GetService("RunService").RenderStepped:Connect(aimbotStep)
 
+-- ESP Tab
 Tabs.ESP:AddToggle("EnableESP", {
     Title = "Enable ESP",
     Default = false,
@@ -157,6 +163,7 @@ Tabs.ESP:AddToggle("ESPTeamCheck", {
     end
 })
 
+-- Aimbot Tab
 Tabs.Aimbot:AddToggle("EnableAimbot", {
     Title = "Enable Aimbot",
     Default = false,
@@ -188,6 +195,15 @@ Tabs.Aimbot:AddSlider("AimbotRadius", {
     end
 })
 
+Tabs.Aimbot:AddColorpicker("FOVCircleColor", {
+    Title = "FOV Circle Color",
+    Default = fovCircleColor,
+    Callback = function(newColor)
+        fovCircleColor = newColor
+        fovCircle.Color = newColor
+    end
+})
+
 Tabs.Aimbot:AddDropdown("TargetPart", {
     Title = "Target Part",
     Values = { "Head", "Torso", "HumanoidRootPart" },
@@ -206,10 +222,40 @@ Tabs.Aimbot:AddToggle("ShowFOV", {
     end
 })
 
-Tabs.Aimbot:AddColorpicker("FOVColor", {
-    Title = "FOV Color",
-    Default = Color3.fromRGB(0, 255, 0),
-    Callback = function(color)
-        fovCircle.Color = color
-    end
+-- Addons:
+-- SaveManager (Allows you to have a configuration system)
+-- InterfaceManager (Allows you to have an interface management system)
+
+-- Hand the library over to our managers
+SaveManager:SetLibrary(Fluent)
+InterfaceManager:SetLibrary(Fluent)
+
+-- Ignore keys that are used by ThemeManager.
+-- (we don't want configs to save themes, do we?)
+SaveManager:IgnoreThemeSettings()
+
+-- You can add indexes of elements the save manager should ignore
+SaveManager:SetIgnoreIndexes({})
+
+-- use case for doing it this way:
+-- a script hub could have themes in a global folder
+-- and game configs in a separate folder per game
+InterfaceManager:SetFolder("FluentScriptHub")
+SaveManager:SetFolder("FluentScriptHub/specific-game")
+
+InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs.Settings)
+
+-- Select the first tab
+Window:SelectTab(1)
+
+-- Notify the user when the script has loaded
+Fluent:Notify({
+    Title = "Fluent",
+    Content = "The script has been loaded.",
+    Duration = 8
 })
+
+-- You can use the SaveManager:LoadAutoloadConfig() to load a config
+-- which has been marked to be one that auto loads!
+SaveManager:LoadAutoloadConfig()
