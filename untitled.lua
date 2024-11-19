@@ -1,4 +1,81 @@
--- Load Fluent UI and required Addons
+local ScreenGui = Instance.new("ScreenGui")
+local Frame = Instance.new("Frame")
+local TextButton = Instance.new("TextButton")
+local UITextSizeConstraint = Instance.new("UITextSizeConstraint")
+
+-- Set Parent for ScreenGui
+ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Frame Properties (for the draggable area)
+Frame.Parent = ScreenGui
+Frame.BackgroundColor3 = Color3.fromRGB(26, 26, 26)
+Frame.BackgroundTransparency = 0.5
+Frame.Position = UDim2.new(0.85, 0, 0.03, 0) -- Top-right corner
+Frame.Size = UDim2.new(0.1, 0, 0.1, 0) -- Smaller size for squircle
+Frame.AnchorPoint = Vector2.new(0.5, 0.5)
+Frame.ZIndex = 999 -- Ensures it's always on top
+
+-- Make Frame draggable
+local dragging = false
+local dragStartPos, dragStartMousePos
+Frame.InputBegan:Connect(function(input, gameProcessed)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStartPos = Frame.Position
+        dragStartMousePos = input.Position
+        input.Consumed = true
+    end
+end)
+
+Frame.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStartMousePos
+        Frame.Position = UDim2.new(dragStartPos.X.Scale, dragStartPos.X.Offset + delta.X, dragStartPos.Y.Scale, dragStartPos.Y.Offset + delta.Y)
+    end
+end)
+
+Frame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+-- TextButton Properties
+TextButton.Parent = Frame
+TextButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+TextButton.BackgroundTransparency = 1.0
+TextButton.Size = UDim2.new(1, 0, 1, 0)
+TextButton.Font = Enum.Font.SourceSans
+TextButton.Text = "Toggle UI"
+TextButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+TextButton.TextScaled = true
+TextButton.TextSize = 50.0
+TextButton.TextStrokeTransparency = 0.0
+
+-- Add Text Size Constraint
+UITextSizeConstraint.Parent = TextButton
+UITextSizeConstraint.MaxTextSize = 30
+
+-- Squircle shape (rounded corners)
+Frame.BorderRadius = UDim.new(0, 12)  -- Creates rounded corners
+
+-- Button Click Functionality
+TextButton.MouseButton1Down:Connect(function()
+    game:GetService("VirtualInputManager"):SendKeyEvent(
+        true, -- Press down
+        Enum.KeyCode.LeftControl, -- Simulate LeftCtrl
+        false, -- No repeat
+        nil -- Player input (not needed here)
+    )
+    game:GetService("VirtualInputManager"):SendKeyEvent(
+        false, -- Release
+        Enum.KeyCode.LeftControl,
+        false,
+        nil
+    )
+end)
+
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
@@ -122,85 +199,3 @@ SaveManager:LoadAutoloadConfig()
 
 -- Finalize GUI
 Window:SelectTab(1)
-
--- Draggable Button Integration
-
--- Create Draggable Frame (squircle style)
-local ScreenGui = Instance.new("ScreenGui")
-local Frame = Instance.new("Frame")
-local TextButton = Instance.new("TextButton")
-local UITextSizeConstraint = Instance.new("UITextSizeConstraint")
-
--- Set Parent for ScreenGui
-ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
--- Frame Properties (for the draggable button)
-Frame.Parent = ScreenGui
-Frame.BackgroundColor3 = Color3.fromRGB(26, 26, 26)
-Frame.BackgroundTransparency = 0.5
-Frame.Position = UDim2.new(0.85, 0, 0.03, 0) -- Top-right corner
-Frame.Size = UDim2.new(0.1, 0, 0.1, 0) -- Small squircle size
-Frame.AnchorPoint = Vector2.new(0.5, 0.5)
-Frame.ZIndex = 999 -- Always on top
-
--- Make Frame draggable
-local dragging = false
-local dragStartPos, dragStartMousePos
-Frame.InputBegan:Connect(function(input, gameProcessed)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStartPos = Frame.Position
-        dragStartMousePos = input.Position
-        input.Consumed = true
-    end
-end)
-
-Frame.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - dragStartMousePos
-        Frame.Position = UDim2.new(dragStartPos.X.Scale, dragStartPos.X.Offset + delta.X, dragStartPos.Y.Scale, dragStartPos.Y.Offset + delta.Y)
-    end
-end)
-
-Frame.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
-end)
-
--- TextButton Properties
-TextButton.Parent = Frame
-TextButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-TextButton.BackgroundTransparency = 1.0
-TextButton.Size = UDim2.new(1, 0, 1, 0)
-TextButton.Font = Enum.Font.SourceSans
-TextButton.Text = "Toggle UI"
-TextButton.TextColor3 = Color3.fromRGB(0, 0, 0)
-TextButton.TextScaled = true
-TextButton.TextSize = 50.0
-TextButton.TextStrokeTransparency = 0.0
-
--- Add Text Size Constraint
-UITextSizeConstraint.Parent = TextButton
-UITextSizeConstraint.MaxTextSize = 30
-
--- Squircle shape (rounded corners)
-Frame.BorderRadius = UDim.new(0, 12)  -- Creates rounded corners
-
--- Button click function that simulates LeftCtrl key event (toggle GUI visibility)
-TextButton.MouseButton1Down:Connect(function()
-    -- Simulate LeftCtrl keypress to toggle GUI
-    game:GetService("VirtualInputManager"):SendKeyEvent(
-        true, -- Press down
-        Enum.KeyCode.LeftControl, -- Simulate LeftCtrl
-        false, -- No repeat
-        nil -- Player input (not needed here)
-    )
-    game:GetService("VirtualInputManager"):SendKeyEvent(
-        false, -- Release
-        Enum.KeyCode.LeftControl,
-        false,
-        nil
-    )
-end)
