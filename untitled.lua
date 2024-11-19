@@ -15,22 +15,41 @@ local Window = Fluent:CreateWindow({
 -- Define tabs
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "" }),
-    Aimbot = Window:AddTab({ Title = "Aimbot", Icon = "target" }), -- New Aimbot tab
+    Aimbot = Window:AddTab({ Title = "Aimbot", Icon = "target" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
 local Options = Fluent.Options
 
--- Add an example button and UI elements for the "Main" tab
-Tabs.Main:AddButton({
-    Title = "Test Button",
-    Description = "This is a test button",
-    Callback = function()
-        print("Button clicked!")
-    end
-})
+-- Highlighter (Main) section
+do
+    local ToggleHighlight = Tabs.Main:AddToggle("HighlightToggle", {
+        Title = "Enable Highlights",
+        Default = false,
+    })
 
--- Aimbot section
+    ToggleHighlight:OnChanged(function()
+        if ToggleHighlight.Value then
+            print("Highlighting enabled.")
+            -- Highlight logic here
+        else
+            print("Highlighting disabled.")
+            -- Remove highlights
+        end
+    end)
+
+    -- Color picker for highlight customization
+    Tabs.Main:AddColorPicker("HighlightColor", {
+        Title = "Highlight Color",
+        Default = Color3.fromRGB(255, 0, 0),
+        Callback = function(color)
+            print("Highlight color set to:", color)
+            -- Update highlight color logic
+        end
+    })
+end
+
+-- Aimbot section (Updated)
 do
     local ToggleAimbot = Tabs.Aimbot:AddToggle("AimbotToggle", {
         Title = "Enable Aimbot",
@@ -40,53 +59,94 @@ do
     ToggleAimbot:OnChanged(function()
         if ToggleAimbot.Value then
             print("Aimbot enabled.")
-            -- Here you would add the code to enable aimbot functionality
         else
             print("Aimbot disabled.")
-            -- Disable aimbot functionality
         end
     end)
 
-    -- Additional controls (if needed)
-    Tabs.Aimbot:AddSlider("FovSlider", {
+    -- FOV Slider for controlling the aimbot's range
+    local fovSlider = Tabs.Aimbot:AddSlider("FovSlider", {
         Title = "Aimbot FOV",
         Min = 0,
-        Max = 180,
-        Default = 90,
+        Max = 100,
+        Default = 50,
         Callback = function(Value)
             print("FOV set to:", Value)
-            -- Adjust the aimbot FOV (Field of View)
+            -- Update the FOV circle radius based on the slider value
+            UpdateFovCircle(Value)
         end
     })
 
-    -- Example of a simple aimbot feature (simplified):
+    -- Show FOV Toggle
+    local showFovToggle = Tabs.Aimbot:AddToggle("ShowFovToggle", {
+        Title = "Show FOV Circle",
+        Default = false,
+    })
+
+    showFovToggle:OnChanged(function()
+        if showFovToggle.Value then
+            print("FOV Circle Visible")
+            FovCircle.Visible = true
+        else
+            print("FOV Circle Hidden")
+            FovCircle.Visible = false
+        end
+    end)
+
+    -- Initialize FOV Circle
+    local FovCircle = Instance.new("Frame")
+    FovCircle.Size = UDim2.fromOffset(100, 100)
+    FovCircle.Position = UDim2.fromScale(0.5, 0.5)
+    FovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+    FovCircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    FovCircle.BackgroundTransparency = 0.5
+    FovCircle.Visible = false
+    FovCircle.Parent = game:GetService("CoreGui")
+
+    -- Function to update the FOV circle size based on the slider
+    function UpdateFovCircle(radius)
+        local screenSize = game:GetService("Workspace").CurrentCamera.ViewportSize
+        local scale = screenSize.X / 1920  -- Assuming base resolution is 1920x1080
+        local size = radius * scale  -- Adjust size to match FOV slider
+        FovCircle.Size = UDim2.fromOffset(size, size)
+    end
+
+    -- Aimbot logic with FOV check
     task.spawn(function()
         while true do
-            wait(0.1)  -- Adjust aim every 0.1 seconds
+            wait(0.1)  -- Adjust every 0.1 seconds
 
             if ToggleAimbot.Value then
-                -- Aimbot logic here (simplified)
-                local target = nil  -- Variable to store the target (enemy)
+                -- Aimbot logic (only targets within the FOV circle)
+                local camera = game:GetService("Workspace").CurrentCamera
+                local mousePosition = game:GetService("Players").LocalPlayer:GetMouse().Hit.p
+                local closestTarget = nil
+                local closestDistance = math.huge
+                local maxDistance = fovSlider.Value * 10  -- Scale distance by slider value
 
-                -- Loop through potential targets (e.g., NPCs, players)
+                -- Loop through potential targets (humanoid models)
                 for _, obj in pairs(workspace:GetChildren()) do
                     if obj:IsA("Model") and obj:FindFirstChild("Humanoid") then
-                        -- Check for enemy NPCs (this can be modified to suit your needs)
-                        local targetPos = obj:FindFirstChild("Head") and obj.Head.Position
-                        if targetPos then
-                            target = obj
-                            break  -- Once target is found, exit the loop
+                        local head = obj:FindFirstChild("Head")
+                        if head then
+                            -- Calculate the distance from the mouse (or crosshair)
+                            local targetPos = head.Position
+                            local screenPos = camera:WorldToScreenPoint(targetPos)
+                            local distance = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(mousePosition.X, mousePosition.Y)).Magnitude
+
+                            -- Check if the target is within the FOV and the closest one
+                            if distance <= maxDistance and distance < closestDistance then
+                                closestTarget = obj
+                                closestDistance = distance
+                            end
                         end
                     end
                 end
 
-                -- If a target is found, aim at it (simplified approach)
-                if target then
-                    -- Example aimbot: adjust camera to look at the target
-                    local camera = game:GetService("Workspace").CurrentCamera
-                    camera.CFrame = CFrame.new(camera.CFrame.Position, target.Head.Position)
-                    -- You can add additional code to shoot, aim, or perform other actions
-                    print("Aiming at target:", target)
+                -- Aim at the closest target within FOV
+                if closestTarget then
+                    camera.CFrame = CFrame.new(camera.CFrame.Position, closestTarget.Head.Position)
+                    print("Aiming at target:", closestTarget)
                 end
             end
         end
