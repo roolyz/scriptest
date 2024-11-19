@@ -2,185 +2,119 @@ local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
--- Create the Fluent Window
 local Window = Fluent:CreateWindow({
     Title = "Fluent " .. Fluent.Version,
     SubTitle = "by dawid",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
-    Acrylic = true, 
+    Acrylic = true,
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.LeftControl
 })
 
+-- Define tabs
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "" }),
-    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" }),
-    Aimbot = Window:AddTab({ Title = "Aimbot", Icon = "target" }) -- New Aimbot Tab
+    Aimbot = Window:AddTab({ Title = "Aimbot", Icon = "target" }), -- New Aimbot tab
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
--- Variables
-local highlightEnabled = false
-local highlightColor = Color3.fromRGB(255, 0, 0) -- Default Red
-local teamCheck = true
-local fov = 70 -- Default FOV
-local aimbotEnabled = false
+local Options = Fluent.Options
 
--- Function to manage highlights
-local function applyHighlights()
-    for _, player in ipairs(game.Players:GetPlayers()) do
-        if player ~= game.Players.LocalPlayer then
-            local character = player.Character
-            if character and character:FindFirstChild("HumanoidRootPart") then
-                local isEnemy = (player.Team ~= game.Players.LocalPlayer.Team) or not teamCheck
-                local highlight = character:FindFirstChildOfClass("Highlight")
+-- Add an example button and UI elements for the "Main" tab
+Tabs.Main:AddButton({
+    Title = "Test Button",
+    Description = "This is a test button",
+    Callback = function()
+        print("Button clicked!")
+    end
+})
 
-                if highlightEnabled and isEnemy then
-                    if not highlight then
-                        highlight = Instance.new("Highlight")
-                        highlight.Name = "EnemyHighlight"
-                        highlight.Parent = character
+-- Aimbot section
+do
+    local ToggleAimbot = Tabs.Aimbot:AddToggle("AimbotToggle", {
+        Title = "Enable Aimbot",
+        Default = false,
+    })
+
+    ToggleAimbot:OnChanged(function()
+        if ToggleAimbot.Value then
+            print("Aimbot enabled.")
+            -- Here you would add the code to enable aimbot functionality
+        else
+            print("Aimbot disabled.")
+            -- Disable aimbot functionality
+        end
+    end)
+
+    -- Additional controls (if needed)
+    Tabs.Aimbot:AddSlider("FovSlider", {
+        Title = "Aimbot FOV",
+        Min = 0,
+        Max = 180,
+        Default = 90,
+        Callback = function(Value)
+            print("FOV set to:", Value)
+            -- Adjust the aimbot FOV (Field of View)
+        end
+    })
+
+    -- Example of a simple aimbot feature (simplified):
+    task.spawn(function()
+        while true do
+            wait(0.1)  -- Adjust aim every 0.1 seconds
+
+            if ToggleAimbot.Value then
+                -- Aimbot logic here (simplified)
+                local target = nil  -- Variable to store the target (enemy)
+
+                -- Loop through potential targets (e.g., NPCs, players)
+                for _, obj in pairs(workspace:GetChildren()) do
+                    if obj:IsA("Model") and obj:FindFirstChild("Humanoid") then
+                        -- Check for enemy NPCs (this can be modified to suit your needs)
+                        local targetPos = obj:FindFirstChild("Head") and obj.Head.Position
+                        if targetPos then
+                            target = obj
+                            break  -- Once target is found, exit the loop
+                        end
                     end
-                    highlight.FillColor = highlightColor
-                    highlight.OutlineColor = Color3.new(1, 1, 1) -- White outline for contrast
-                    highlight.FillTransparency = 0.5
-                    highlight.OutlineTransparency = 0
-                elseif highlight then
-                    highlight:Destroy()
+                end
+
+                -- If a target is found, aim at it (simplified approach)
+                if target then
+                    -- Example aimbot: adjust camera to look at the target
+                    local camera = game:GetService("Workspace").CurrentCamera
+                    camera.CFrame = CFrame.new(camera.CFrame.Position, target.Head.Position)
+                    -- You can add additional code to shoot, aim, or perform other actions
+                    print("Aiming at target:", target)
                 end
             end
         end
-    end
+    end)
 end
 
--- Aimbot logic (simplified for demonstration)
-local function applyAimbot()
-    if aimbotEnabled then
-        -- Find nearest enemy within FOV
-        local closestTarget, closestDistance = nil, math.huge
-        for _, player in ipairs(game.Players:GetPlayers()) do
-            if player ~= game.Players.LocalPlayer and player.Team ~= game.Players.LocalPlayer.Team then
-                local character = player.Character
-                if character and character:FindFirstChild("HumanoidRootPart") then
-                    local distance = (character.HumanoidRootPart.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-                    if distance < closestDistance and distance <= fov then
-                        closestDistance = distance
-                        closestTarget = character
-                    end
-                end
-            end
-        end
-        
-        -- Aim at the closest target if available
-        if closestTarget then
-            local targetPosition = closestTarget.HumanoidRootPart.Position
-            -- Logic to aim at target (simplified)
-            game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(game.Players.LocalPlayer.Character.HumanoidRootPart.Position, targetPosition)
-        end
-    end
-end
-
--- Aimbot updater (runs continuously)
-task.spawn(function()
-    while task.wait(0.1) do
-        if aimbotEnabled then
-            applyAimbot()
-        end
-    end
-end)
-
--- FOV circle drawing
-local fovCircle = Instance.new("CircleHandleAdornment")
-fovCircle.Radius = fov / 2
-fovCircle.Adornee = game.Workspace
-fovCircle.Color3 = Color3.new(0, 1, 0) -- Green circle
-fovCircle.Transparency = 0.5
-fovCircle.ZIndex = 5
-fovCircle.Parent = game.CoreGui
-
--- FOV updater
-task.spawn(function()
-    while task.wait(0.1) do
-        fovCircle.Radius = fov / 2
-    end
-end)
-
--- GUI Elements
-Tabs.Main:AddToggle("EnableHighlight", {
-    Title = "Enable Enemy Highlights",
-    Default = false,
-    Callback = function(state)
-        highlightEnabled = state
-        if not state then
-            -- Remove highlights when disabled
-            for _, player in ipairs(game.Players:GetPlayers()) do
-                local character = player.Character
-                if character then
-                    local highlight = character:FindFirstChild("EnemyHighlight")
-                    if highlight then
-                        highlight:Destroy()
-                    end
-                end
-            end
-        end
-        print("Highlighting enabled:", state)
+-- Settings section (existing)
+Tabs.Settings:AddSlider("Slider", {
+    Title = "Slider",
+    Min = 0,
+    Max = 5,
+    Default = 2,
+    Callback = function(Value)
+        print("Slider value:", Value)
     end
 })
 
-Tabs.Main:AddColorpicker("HighlightColor", {
-    Title = "Highlight Color",
-    Default = highlightColor,
-    Callback = function(newColor)
-        highlightColor = newColor
-        print("Highlight color changed:", newColor)
-    end
-})
-
-Tabs.Main:AddToggle("TeamCheck", {
-    Title = "Enable Team Check",
-    Default = true,
-    Callback = function(state)
-        teamCheck = state
-        print("Team check enabled:", state)
-    end
-})
-
--- Aimbot Tab
-Tabs.Aimbot:AddToggle("EnableAimbot", {
-    Title = "Enable Aimbot",
-    Default = false,
-    Callback = function(state)
-        aimbotEnabled = state
-        print("Aimbot enabled:", state)
-    end
-})
-
-Tabs.Aimbot:AddSlider("FOV", {
-    Title = "FOV",
-    Default = fov,
-    Min = 30,
-    Max = 100,
-    Rounding = 1,
-    Callback = function(value)
-        fov = value
-        print("FOV changed:", fov)
-    end
-})
-
--- SaveManager and InterfaceManager Setup
+-- Final setup and UI configuration
 SaveManager:SetLibrary(Fluent)
 InterfaceManager:SetLibrary(Fluent)
-SaveManager:IgnoreThemeSettings()
+
 SaveManager:SetIgnoreIndexes({})
 InterfaceManager:SetFolder("FluentScriptHub")
 SaveManager:SetFolder("FluentScriptHub/specific-game")
+
 InterfaceManager:BuildInterfaceSection(Tabs.Settings)
 SaveManager:BuildConfigSection(Tabs.Settings)
 
--- Auto-load Configs
-SaveManager:LoadAutoloadConfig()
-
--- Finalize GUI
 Window:SelectTab(1)
 
 Fluent:Notify({
@@ -189,5 +123,4 @@ Fluent:Notify({
     Duration = 8
 })
 
--- Auto-load config example
 SaveManager:LoadAutoloadConfig()
