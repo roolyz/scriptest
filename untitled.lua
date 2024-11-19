@@ -3,8 +3,8 @@ local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/d
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
 local Window = Fluent:CreateWindow({
-    Title = "Game Utility Script",
-    SubTitle = "by dawid",
+    Title = "Universal FPS Script",
+    SubTitle = "reminisense",
     TabWidth = 140,
     Size = UDim2.fromOffset(450, 400),
     Acrylic = true,
@@ -51,37 +51,39 @@ game:GetService("RunService").RenderStepped:Connect(function()
     end
 end)
 
--- Highlighting Functionality for ESP
-local function createHighlight(player)
-    if not espEnabled or (espTeamCheck and player.Team == game.Players.LocalPlayer.Team) then
-        return
-    end
-
-    local character = player.Character
-    if character and not character:FindFirstChild("ESPHighlight") then
-        local highlight = Instance.new("Highlight")
-        highlight.Parent = character
-        highlight.Name = "ESPHighlight"
-        highlight.FillTransparency = 0.5
-        highlight.OutlineTransparency = 0.2
-        highlight.FillColor = espColor
-        highlight.OutlineColor = Color3.new(1, 1, 1)
-    end
-end
-
-local function updateHighlights()
-    for _, player in pairs(game.Players:GetPlayers()) do
+-- ESP Logic
+local function applyHighlights()
+    for _, player in ipairs(game.Players:GetPlayers()) do
         if player ~= game.Players.LocalPlayer then
-            createHighlight(player)
+            local character = player.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                local isEnemy = (player.Team ~= game.Players.LocalPlayer.Team) or not teamCheck
+                local highlight = character:FindFirstChildOfClass("Highlight")
+
+                if highlightEnabled and isEnemy then
+                    if not highlight then
+                        highlight = Instance.new("Highlight")
+                        highlight.Name = "EnemyHighlight"
+                        highlight.Parent = character
+                    end
+                    highlight.FillColor = highlightColor
+                    highlight.OutlineColor = Color3.new(1, 1, 1) -- White outline for contrast
+                    highlight.FillTransparency = 0.5
+                    highlight.OutlineTransparency = 0
+                elseif highlight then
+                    highlight:Destroy()
+                end
+            end
         end
     end
 end
 
-game.Players.PlayerAdded:Connect(updateHighlights)
-game.Players.PlayerRemoving:Connect(function(player)
-    local character = player.Character
-    if character and character:FindFirstChild("ESPHighlight") then
-        character.ESPHighlight:Destroy()
+-- Highlight updater (runs continuously)
+task.spawn(function()
+    while task.wait(0.1) do
+        if highlightEnabled then
+            applyHighlights()
+        end
     end
 end)
 
@@ -159,7 +161,18 @@ Tabs.ESP:AddToggle("ESPTeamCheck", {
     Default = true,
     Callback = function(state)
         espTeamCheck = state
-        updateHighlights()
+        if not state then
+            -- Remove highlights when disabled
+            for _, player in ipairs(game.Players:GetPlayers()) do
+                local character = player.Character
+                if character then
+                    local highlight = character:FindFirstChild("EnemyHighlight")
+                    if highlight then
+                        highlight:Destroy()
+                    end
+                end
+            end
+        end
     end
 })
 
