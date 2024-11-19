@@ -1,3 +1,4 @@
+local UserInputService = game:GetService("UserInputService")
 local ScreenGui = Instance.new("ScreenGui")
 local Frame = Instance.new("Frame")
 local TextButton = Instance.new("TextButton")
@@ -52,7 +53,7 @@ end)
 
 -- Make the button draggable
 Frame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         Dragging = true
         DragStart = input.Position
         StartPos = Frame.Position
@@ -60,14 +61,14 @@ Frame.InputBegan:Connect(function(input)
 end)
 
 Frame.InputChanged:Connect(function(input)
-    if Dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+    if Dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         local Delta = input.Position - DragStart
         Frame.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
     end
 end)
 
 Frame.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         Dragging = false
     end
 end)
