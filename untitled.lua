@@ -26,7 +26,7 @@ local teamCheck = true
 local aimbotEnabled = false
 local aimbotSmoothing = 0.5
 local aimbotTargetPart = "Head"
-local aimbotRadius = 100 -- Default targeting radius (in studs)
+local aimbotRadius = 35 -- Default targeting radius (in studs)
 local showFOV = true
 local fovCircleColor = Color3.fromRGB(0, 255, 0) -- Default Green
 
@@ -130,7 +130,7 @@ end
 game:GetService("RunService").RenderStepped:Connect(aimbotStep)
 
 -- ESP Tab
-Tabs.ESP:AddToggle("EnableESP", {
+Tabs.ESP:AddToggle("highlightEnabled", {
     Title = "Enable ESP",
     Default = false,
     Callback = function(state)
@@ -147,7 +147,7 @@ Tabs.ESP:AddToggle("EnableESP", {
     end
 })
 
-Tabs.ESP:AddColorpicker("ESPColor", {
+Tabs.ESP:AddColorpicker("highlightColor", {
     Title = "ESP Color",
     Default = espColor,
     Callback = function(newColor)
@@ -156,7 +156,7 @@ Tabs.ESP:AddColorpicker("ESPColor", {
     end
 })
 
-Tabs.ESP:AddToggle("ESPTeamCheck", {
+Tabs.ESP:AddToggle("teamCheck", {
     Title = "Team Check",
     Default = true,
     Callback = function(state)
