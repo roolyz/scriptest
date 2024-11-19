@@ -19,9 +19,9 @@ local Tabs = {
 }
 
 -- Variables
-local espEnabled = false
-local espColor = Color3.fromRGB(255, 0, 0) -- Default Red
-local espTeamCheck = true
+local highlightEnabled = false
+local highlightColor = Color3.fromRGB(255, 0, 0) -- Default Red
+local teamCheck = true
 
 local aimbotEnabled = false
 local aimbotSmoothing = 0.5
