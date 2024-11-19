@@ -6,8 +6,8 @@ local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.
 local Window = Fluent:CreateWindow({
     Title = "Enemy Highlighter",
     SubTitle = "by dawid",
-    TabWidth = 140, -- Adjusted for mobile
-    Size = UDim2.fromOffset(450, 320), -- Smaller size for mobile
+    TabWidth = 140,
+    Size = UDim2.fromOffset(450, 320), -- Mobile-friendly size
     Acrylic = true,
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.LeftControl -- Default keybind
@@ -39,7 +39,7 @@ local function applyHighlights()
                         highlight.Parent = character
                     end
                     highlight.FillColor = highlightColor
-                    highlight.OutlineColor = Color3.new(1, 1, 1) -- White outline for contrast
+                    highlight.OutlineColor = Color3.new(1, 1, 1) -- White outline
                     highlight.FillTransparency = 0.5
                     highlight.OutlineTransparency = 0
                 elseif highlight then
@@ -96,50 +96,17 @@ Tabs.Main:AddToggle("TeamCheck", {
     end
 })
 
--- Mobile Keybind Button
-local keybindButton = Instance.new("TextButton")
-keybindButton.Size = UDim2.new(0, 100, 0, 50)
-keybindButton.Position = UDim2.new(0.05, 0, 0.05, 0) -- Top-left corner
-keybindButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-keybindButton.Text = "Key: LeftCtrl" -- Show default keybind
-keybindButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-keybindButton.Font = Enum.Font.SourceSansBold
-keybindButton.TextSize = 18
-keybindButton.Parent = game.CoreGui
+-- Mobile Squircle Button
+local squircleButton = Instance.new("ImageButton")
+squircleButton.Name = "SquircleKeybindButton"
+squircleButton.Size = UDim2.new(0, 50, 0, 50) -- Squircle size
+squircleButton.Position = UDim2.new(0.05, 0, 0.05, 0) -- Top-left corner
+squircleButton.BackgroundTransparency = 1
+squircleButton.Image = "rbxassetid://7072719258" -- Squircle icon (replace with any asset ID)
+squircleButton.Parent = game.CoreGui
 
-keybindButton.MouseButton1Click:Connect(function()
+squircleButton.MouseButton1Click:Connect(function()
     Window:SetVisible(not Window:GetVisible())
-end)
-
--- Make button draggable
-local dragging
-local dragStart
-local startPos
-
-keybindButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = keybindButton.Position
-    end
-end)
-
-keybindButton.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - dragStart
-        keybindButton.Position = UDim2.new(
-            startPos.X.Scale,
-            startPos.X.Offset + delta.X,
-            startPos.Y.Scale,
-            startPos.Y.Offset + delta.Y
-        )
-    end
-end)
-
-keybindButton.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
 end)
 
 -- Notification for GUI Load
