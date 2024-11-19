@@ -25,7 +25,7 @@ local espTeamCheck = true
 local aimbotEnabled = false
 local aimbotSmoothing = 0.5
 local aimbotTargetPart = "Head"
-local aimbotRadius = 100
+local aimbotRadius = 100 -- Default targeting radius (in studs)
 local showFOV = true
 
 local fovCircle = Drawing.new("Circle")
@@ -207,28 +207,9 @@ Tabs.Aimbot:AddToggle("ShowFOV", {
 })
 
 Tabs.Aimbot:AddColorpicker("FOVColor", {
-    Title = "FOV Circle Color",
-    Default = fovCircle.Color,
-    Callback = function(newColor)
-        fovCircle.Color = newColor
+    Title = "FOV Color",
+    Default = Color3.fromRGB(0, 255, 0),
+    Callback = function(color)
+        fovCircle.Color = color
     end
 })
-
-SaveManager:SetLibrary(Fluent)
-InterfaceManager:SetLibrary(Fluent)
-SaveManager:IgnoreThemeSettings()
-SaveManager:SetIgnoreIndexes({})
-InterfaceManager:SetFolder("FluentScriptHub")
-SaveManager:SetFolder("FluentScriptHub/specific-game")
-InterfaceManager:BuildInterfaceSection(Tabs.Settings)
-SaveManager:BuildConfigSection(Tabs.Settings)
-
-Window:SelectTab(1)
-
-Fluent:Notify({
-    Title = "Fluent",
-    Content = "The script has been loaded.",
-    Duration = 8
-})
-
-SaveManager:LoadAutoloadConfig()
