@@ -18,22 +18,22 @@ local Tabs = {
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
--- Variables
 local espEnabled = false
-local espColor = Color3.fromRGB(255, 0, 0) -- Default Red
+local espColor = Color3.fromRGB(255, 0, 0)
 local espTeamCheck = true
 
 local aimbotEnabled = false
 local aimbotSmoothing = 0.5
 local aimbotTargetPart = "Head"
-local aimbotRadius = 100 -- Default targeting radius (in studs)
+local aimbotRadius = 100
 local showFOV = true
+local fovColor = Color3.fromRGB(0, 255, 0)
 
 local fovCircle = Drawing.new("Circle")
 fovCircle.Visible = false
 fovCircle.Transparency = 1
 fovCircle.Thickness = 2
-fovCircle.Color = Color3.fromRGB(0, 255, 0) -- Default Green
+fovCircle.Color = fovColor
 fovCircle.Filled = false
 
 local function updateFOVCircle()
@@ -50,7 +50,6 @@ game:GetService("RunService").RenderStepped:Connect(function()
     end
 end)
 
--- Original Highlighter Logic for ESP
 local function createHighlight(player)
     if not espEnabled or (espTeamCheck and player.Team == game.Players.LocalPlayer.Team) then
         return
@@ -84,7 +83,6 @@ game.Players.PlayerRemoving:Connect(function(player)
     end
 end)
 
--- Get Closest Enemy
 local function getClosestEnemy()
     local localPlayer = game.Players.LocalPlayer
     local camera = game.Workspace.CurrentCamera
@@ -111,7 +109,6 @@ local function getClosestEnemy()
     return closestEnemy
 end
 
--- Aimbot Logic
 local function aimbotStep()
     if aimbotEnabled then
         local closestEnemy = getClosestEnemy()
@@ -126,7 +123,6 @@ end
 
 game:GetService("RunService").RenderStepped:Connect(aimbotStep)
 
--- ESP Tab
 Tabs.ESP:AddToggle("EnableESP", {
     Title = "Enable ESP",
     Default = false,
@@ -162,7 +158,6 @@ Tabs.ESP:AddToggle("ESPTeamCheck", {
     end
 })
 
--- Aimbot Tab
 Tabs.Aimbot:AddToggle("EnableAimbot", {
     Title = "Enable Aimbot",
     Default = false,
@@ -185,7 +180,7 @@ Tabs.Aimbot:AddSlider("AimbotSmoothing", {
 Tabs.Aimbot:AddSlider("AimbotRadius", {
     Title = "Aimbot Radius",
     Min = 50,
-    Max = 300,
+    Max = 100,
     Default = aimbotRadius,
     Rounding = 0,
     Callback = function(value)
@@ -209,5 +204,14 @@ Tabs.Aimbot:AddToggle("ShowFOV", {
     Callback = function(state)
         showFOV = state
         fovCircle.Visible = state
+    end
+})
+
+Tabs.Aimbot:AddColorpicker("FOVColor", {
+    Title = "FOV Circle Color",
+    Default = fovColor,
+    Callback = function(newColor)
+        fovColor = newColor
+        fovCircle.Color = fovColor
     end
 })
