@@ -2,46 +2,22 @@ local ScreenGui = Instance.new("ScreenGui")
 local Frame = Instance.new("Frame")
 local TextButton = Instance.new("TextButton")
 local UITextSizeConstraint = Instance.new("UITextSizeConstraint")
+local Dragging = false
+local DragStart = nil
+local StartPos = nil
 
 -- Set Parent for ScreenGui
 ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Frame Properties (for the draggable area)
+-- Frame Properties
 Frame.Parent = ScreenGui
 Frame.BackgroundColor3 = Color3.fromRGB(26, 26, 26)
 Frame.BackgroundTransparency = 0.5
-Frame.Position = UDim2.new(0.85, 0, 0.03, 0) -- Top-right corner
-Frame.Size = UDim2.new(0.1, 0, 0.1, 0) -- Smaller size for squircle
-Frame.AnchorPoint = Vector2.new(0.5, 0.5)
-Frame.ZIndex = 999 -- Ensures it's always on top
+Frame.Position = UDim2.new(0.8587, 0, 0.0237, 0) -- Top-right corner
+Frame.Size = UDim2.new(0.1295, 0, 0.2279, 0)
 
--- Make Frame draggable
-local dragging = false
-local dragStartPos, dragStartMousePos
-Frame.InputBegan:Connect(function(input, gameProcessed)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStartPos = Frame.Position
-        dragStartMousePos = input.Position
-        input.Consumed = true
-    end
-end)
-
-Frame.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - dragStartMousePos
-        Frame.Position = UDim2.new(dragStartPos.X.Scale, dragStartPos.X.Offset + delta.X, dragStartPos.Y.Scale, dragStartPos.Y.Offset + delta.Y)
-    end
-end)
-
-Frame.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
-end)
-
--- TextButton Properties
+-- Button Properties
 TextButton.Parent = Frame
 TextButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 TextButton.BackgroundTransparency = 1.0
@@ -57,11 +33,9 @@ TextButton.TextStrokeTransparency = 0.0
 UITextSizeConstraint.Parent = TextButton
 UITextSizeConstraint.MaxTextSize = 30
 
--- Squircle shape (rounded corners)
-Frame.BorderRadius = UDim.new(0, 12)  -- Creates rounded corners
-
 -- Button Click Functionality
 TextButton.MouseButton1Down:Connect(function()
+    -- Toggle GUI on LeftCtrl
     game:GetService("VirtualInputManager"):SendKeyEvent(
         true, -- Press down
         Enum.KeyCode.LeftControl, -- Simulate LeftCtrl
@@ -74,6 +48,35 @@ TextButton.MouseButton1Down:Connect(function()
         false,
         nil
     )
+end)
+
+-- Make the button draggable
+Frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        Dragging = true
+        DragStart = input.Position
+        StartPos = Frame.Position
+    end
+end)
+
+Frame.InputChanged:Connect(function(input)
+    if Dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local Delta = input.Position - DragStart
+        Frame.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
+    end
+end)
+
+Frame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        Dragging = false
+    end
+end)
+
+-- Ensure the UI stays on top when game state changes
+game:GetService("Players").LocalPlayer.PlayerScripts.ChildAdded:Connect(function()
+    if not ScreenGui.Parent then
+        ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    end
 end)
 
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
