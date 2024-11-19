@@ -97,13 +97,18 @@ Tabs.Main:AddToggle("TeamCheck", {
 })
 
 -- Mobile Squircle Button
+local playerGui = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ToggleButtonGUI"
+screenGui.Parent = playerGui
+
 local squircleButton = Instance.new("ImageButton")
 squircleButton.Name = "SquircleKeybindButton"
 squircleButton.Size = UDim2.new(0, 50, 0, 50) -- Squircle size
 squircleButton.Position = UDim2.new(0.05, 0, 0.05, 0) -- Top-left corner
 squircleButton.BackgroundTransparency = 1
 squircleButton.Image = "rbxassetid://7072719258" -- Squircle icon (replace with any asset ID)
-squircleButton.Parent = game.CoreGui
+squircleButton.Parent = screenGui
 
 squircleButton.MouseButton1Click:Connect(function()
     Window:SetVisible(not Window:GetVisible())
