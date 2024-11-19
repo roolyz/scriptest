@@ -1,51 +1,4 @@
-local ScreenGui = Instance.new("ScreenGui")
-local Frame = Instance.new("Frame")
-local TextButton = Instance.new("TextButton")
-local UITextSizeConstraint = Instance.new("UITextSizeConstraint")
-
--- Set Parent for ScreenGui
-ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
--- Frame Properties
-Frame.Parent = ScreenGui
-Frame.BackgroundColor3 = Color3.fromRGB(26, 26, 26)
-Frame.BackgroundTransparency = 0.5
-Frame.Position = UDim2.new(0.8587, 0, 0.0237, 0) -- Top-right corner
-Frame.Size = UDim2.new(0.1295, 0, 0.2279, 0)
-
--- Button Properties
-TextButton.Parent = Frame
-TextButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-TextButton.BackgroundTransparency = 1.0
-TextButton.Size = UDim2.new(1, 0, 1, 0)
-TextButton.Font = Enum.Font.SourceSans
-TextButton.Text = "Toggle UI"
-TextButton.TextColor3 = Color3.fromRGB(0, 0, 0)
-TextButton.TextScaled = true
-TextButton.TextSize = 50.0
-TextButton.TextStrokeTransparency = 0.0
-
--- Add Text Size Constraint
-UITextSizeConstraint.Parent = TextButton
-UITextSizeConstraint.MaxTextSize = 30
-
--- Button Click Functionality
-TextButton.MouseButton1Down:Connect(function()
-    game:GetService("VirtualInputManager"):SendKeyEvent(
-        true, -- Press down
-        Enum.KeyCode.LeftControl, -- Simulate LeftCtrl
-        false, -- No repeat
-        nil -- Player input (not needed here)
-    )
-    game:GetService("VirtualInputManager"):SendKeyEvent(
-        false, -- Release
-        Enum.KeyCode.LeftControl,
-        false,
-        nil
-    )
-end)
-
+-- Load Fluent UI and required Addons
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
@@ -54,11 +7,11 @@ local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.
 local Window = Fluent:CreateWindow({
     Title = "Enemy Highlighter",
     SubTitle = "by dawid",
-    TabWidth = 140, -- Adjusted for mobile
-    Size = UDim2.fromOffset(450, 320), -- Smaller size for mobile
+    TabWidth = 140, -- Reduced width for better mobile fit
+    Size = UDim2.fromOffset(450, 320), -- Smaller size for mobile screens
     Acrylic = true,
     Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl -- Default keybind
+    MinimizeKey = Enum.KeyCode.LeftControl
 })
 
 local Tabs = {
@@ -125,6 +78,7 @@ Tabs.Main:AddToggle("EnableHighlight", {
                 end
             end
         end
+        print("Highlighting enabled:", state)
     end
 })
 
@@ -133,6 +87,7 @@ Tabs.Main:AddColorpicker("HighlightColor", {
     Default = highlightColor,
     Callback = function(newColor)
         highlightColor = newColor
+        print("Highlight color changed:", newColor)
     end
 })
 
@@ -141,24 +96,9 @@ Tabs.Main:AddToggle("TeamCheck", {
     Default = true,
     Callback = function(state)
         teamCheck = state
+        print("Team check enabled:", state)
     end
 })
-
--- Mobile Keybind Button
-local keybindButton = Instance.new("TextButton")
-keybindButton.Size = UDim2.new(0, 100, 0, 50)
-keybindButton.Position = UDim2.new(0.05, 0, 0.05, 0) -- Top-left corner
-keybindButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-keybindButton.Text = "Toggle GUI"
-keybindButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-keybindButton.Font = Enum.Font.SourceSansBold
-keybindButton.TextSize = 18
-keybindButton.Parent = game.CoreGui
-
-keybindButton.MouseButton1Click:Connect(function()
-    -- Simulate the keybind
-    Window:Toggle() -- Built-in Fluent function to toggle GUI visibility
-end)
 
 -- Notification for GUI Load
 Fluent:Notify({
@@ -182,3 +122,85 @@ SaveManager:LoadAutoloadConfig()
 
 -- Finalize GUI
 Window:SelectTab(1)
+
+-- Draggable Button Integration
+
+-- Create Draggable Frame (squircle style)
+local ScreenGui = Instance.new("ScreenGui")
+local Frame = Instance.new("Frame")
+local TextButton = Instance.new("TextButton")
+local UITextSizeConstraint = Instance.new("UITextSizeConstraint")
+
+-- Set Parent for ScreenGui
+ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Frame Properties (for the draggable button)
+Frame.Parent = ScreenGui
+Frame.BackgroundColor3 = Color3.fromRGB(26, 26, 26)
+Frame.BackgroundTransparency = 0.5
+Frame.Position = UDim2.new(0.85, 0, 0.03, 0) -- Top-right corner
+Frame.Size = UDim2.new(0.1, 0, 0.1, 0) -- Small squircle size
+Frame.AnchorPoint = Vector2.new(0.5, 0.5)
+Frame.ZIndex = 999 -- Always on top
+
+-- Make Frame draggable
+local dragging = false
+local dragStartPos, dragStartMousePos
+Frame.InputBegan:Connect(function(input, gameProcessed)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStartPos = Frame.Position
+        dragStartMousePos = input.Position
+        input.Consumed = true
+    end
+end)
+
+Frame.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStartMousePos
+        Frame.Position = UDim2.new(dragStartPos.X.Scale, dragStartPos.X.Offset + delta.X, dragStartPos.Y.Scale, dragStartPos.Y.Offset + delta.Y)
+    end
+end)
+
+Frame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+-- TextButton Properties
+TextButton.Parent = Frame
+TextButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+TextButton.BackgroundTransparency = 1.0
+TextButton.Size = UDim2.new(1, 0, 1, 0)
+TextButton.Font = Enum.Font.SourceSans
+TextButton.Text = "Toggle UI"
+TextButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+TextButton.TextScaled = true
+TextButton.TextSize = 50.0
+TextButton.TextStrokeTransparency = 0.0
+
+-- Add Text Size Constraint
+UITextSizeConstraint.Parent = TextButton
+UITextSizeConstraint.MaxTextSize = 30
+
+-- Squircle shape (rounded corners)
+Frame.BorderRadius = UDim.new(0, 12)  -- Creates rounded corners
+
+-- Button click function that simulates LeftCtrl key event (toggle GUI visibility)
+TextButton.MouseButton1Down:Connect(function()
+    -- Simulate LeftCtrl keypress to toggle GUI
+    game:GetService("VirtualInputManager"):SendKeyEvent(
+        true, -- Press down
+        Enum.KeyCode.LeftControl, -- Simulate LeftCtrl
+        false, -- No repeat
+        nil -- Player input (not needed here)
+    )
+    game:GetService("VirtualInputManager"):SendKeyEvent(
+        false, -- Release
+        Enum.KeyCode.LeftControl,
+        false,
+        nil
+    )
+end)
