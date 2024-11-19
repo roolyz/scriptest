@@ -16,7 +16,7 @@ local Tabs = {
     ESP = Window:AddTab({ Title = "ESP", Icon = "" }),
     Aimbot = Window:AddTab({ Title = "Aimbot", Icon = "" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
-})
+}
 
 local espEnabled = false
 local espColor = Color3.fromRGB(255, 0, 0)
@@ -25,15 +25,14 @@ local espTeamCheck = true
 local aimbotEnabled = false
 local aimbotSmoothing = 0.5
 local aimbotTargetPart = "Head"
-local aimbotRadius = 30
+local aimbotRadius = 100
 local showFOV = true
-local fovColor = Color3.fromRGB(0, 255, 0)
 
 local fovCircle = Drawing.new("Circle")
 fovCircle.Visible = false
 fovCircle.Transparency = 1
 fovCircle.Thickness = 2
-fovCircle.Color = fovColor
+fovCircle.Color = Color3.fromRGB(0, 255, 0)
 fovCircle.Filled = false
 
 local function updateFOVCircle()
@@ -209,9 +208,27 @@ Tabs.Aimbot:AddToggle("ShowFOV", {
 
 Tabs.Aimbot:AddColorpicker("FOVColor", {
     Title = "FOV Circle Color",
-    Default = fovColor,
+    Default = fovCircle.Color,
     Callback = function(newColor)
-        fovColor = newColor
-        fovCircle.Color = fovColor
+        fovCircle.Color = newColor
     end
 })
+
+SaveManager:SetLibrary(Fluent)
+InterfaceManager:SetLibrary(Fluent)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({})
+InterfaceManager:SetFolder("FluentScriptHub")
+SaveManager:SetFolder("FluentScriptHub/specific-game")
+InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs.Settings)
+
+Window:SelectTab(1)
+
+Fluent:Notify({
+    Title = "Fluent",
+    Content = "The script has been loaded.",
+    Duration = 8
+})
+
+SaveManager:LoadAutoloadConfig()
