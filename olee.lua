@@ -159,19 +159,7 @@ Tabs.ESP:AddToggle("ESPTeamCheck", {
     Default = true,
     Callback = function(state)
         espTeamCheck = state
-        if not state then
-        
-        for _, player in ipairs(game.Players:GetPlayers()) do
-                local character = player.Character
-                if character then
-                    local highlight = character:FindFirstChild("ESPTeamCheck")
-                    if highlight then
-                        highlight:Destroy()
-                    end
-                end
-            end
-        end
-    end
+     end
 })
 
 -- Aimbot Tab
@@ -262,9 +250,9 @@ Window:SelectTab(1)
 
 -- Notify the user when the script has loaded
 Fluent:Notify({
-    Title = "Fluent",
+    Title = "Universal Aimbot and ESP",
     Content = "The script has been loaded.",
-    Duration = 8
+    Duration = 5
 })
 
 -- You can use the SaveManager:LoadAutoloadConfig() to load a config
