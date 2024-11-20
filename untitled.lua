@@ -3,8 +3,8 @@ local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/d
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
 local Window = Fluent:CreateWindow({
-    Title = "Universal FPS Script",
-    SubTitle = "reminisense",
+    Title = "Game Utility Script",
+    SubTitle = "by dawid",
     TabWidth = 140,
     Size = UDim2.fromOffset(450, 400),
     Acrylic = true,
@@ -19,14 +19,14 @@ local Tabs = {
 }
 
 -- Variables
-local highlightEnabled = false
-local highlightColor = Color3.fromRGB(255, 0, 0) -- Default Red
-local teamCheck = true
+local espEnabled = false
+local espColor = Color3.fromRGB(255, 0, 0) -- Default Red
+local espTeamCheck = true
 
 local aimbotEnabled = false
 local aimbotSmoothing = 0.5
 local aimbotTargetPart = "Head"
-local aimbotRadius = 35 -- Default targeting radius (in studs)
+local aimbotRadius = 100 -- Default targeting radius (in studs)
 local showFOV = true
 local fovCircleColor = Color3.fromRGB(0, 255, 0) -- Default Green
 
@@ -51,39 +51,42 @@ game:GetService("RunService").RenderStepped:Connect(function()
     end
 end)
 
--- ESP Logic
-local function applyHighlights()
-    for _, player in ipairs(game.Players:GetPlayers()) do
-        if player ~= game.Players.LocalPlayer then
-            local character = player.Character
-            if character and character:FindFirstChild("HumanoidRootPart") then
-                local isEnemy = (player.Team ~= game.Players.LocalPlayer.Team) or not teamCheck
-                local highlight = character:FindFirstChildOfClass("Highlight")
+-- Highlighting Functionality for ESP
+local function createHighlight(player)
+    if not espEnabled or (espTeamCheck and player.Team == game.Players.LocalPlayer.Team) then
+        return
+    end
 
-                if highlightEnabled and isEnemy then
-                    if not highlight then
-                        highlight = Instance.new("Highlight")
-                        highlight.Name = "EnemyHighlight"
-                        highlight.Parent = character
-                    end
-                    highlight.FillColor = highlightColor
-                    highlight.OutlineColor = Color3.new(1, 1, 1) -- White outline for contrast
-                    highlight.FillTransparency = 0.5
-                    highlight.OutlineTransparency = 0
-                elseif highlight then
-                    highlight:Destroy()
-                end
-            end
+    local character = player.Character
+    if character and not character:FindFirstChild("ESPHighlight") then
+        local highlight = Instance.new("Highlight")
+        highlight.Parent = character
+        highlight.Name = "ESPHighlight"
+        highlight.FillTransparency = 0.5
+        highlight.OutlineTransparency = 0.2
+        highlight.FillColor = espColor
+        highlight.OutlineColor = Color3.new(1, 1, 1)
+    end
+end
+
+local function updateHighlights()
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player ~= game.Players.LocalPlayer then
+            createHighlight(player)
         end
     end
 end
 
--- Highlight updater (runs continuously)
-task.spawn(function()
-    while task.wait(0.1) do
-        if highlightEnabled then
-            applyHighlights()
-        end
+game.Players.PlayerAdded:Connect(function(player)
+    if espEnabled then
+        updateHighlights()
+    end
+end)
+
+game.Players.PlayerRemoving:Connect(function(player)
+    local character = player.Character
+    if character and character:FindFirstChild("ESPHighlight") then
+        character.ESPHighlight:Destroy()
     end
 end)
 
@@ -130,7 +133,7 @@ end
 game:GetService("RunService").RenderStepped:Connect(aimbotStep)
 
 -- ESP Tab
-Tabs.ESP:AddToggle("EnableHighlight", {
+Tabs.ESP:AddToggle("EnableESP", {
     Title = "Enable ESP",
     Default = false,
     Callback = function(state)
@@ -147,7 +150,7 @@ Tabs.ESP:AddToggle("EnableHighlight", {
     end
 })
 
-Tabs.ESP:AddColorpicker("HighlightColor", {
+Tabs.ESP:AddColorpicker("ESPColor", {
     Title = "ESP Color",
     Default = espColor,
     Callback = function(newColor)
@@ -156,23 +159,12 @@ Tabs.ESP:AddColorpicker("HighlightColor", {
     end
 })
 
-Tabs.ESP:AddToggle("TeamCheck", {
+Tabs.ESP:AddToggle("ESPTeamCheck", {
     Title = "Team Check",
     Default = true,
     Callback = function(state)
         espTeamCheck = state
-        if not state then
-            -- Remove highlights when disabled
-            for _, player in ipairs(game.Players:GetPlayers()) do
-                local character = player.Character
-                if character then
-                    local highlight = character:FindFirstChild("EnemyHighlight")
-                    if highlight then
-                        highlight:Destroy()
-                    end
-                end
-            end
-        end
+        updateHighlights()
     end
 })
 
