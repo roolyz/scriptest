@@ -98,20 +98,27 @@ local function getClosestEnemy()
     local localPlayer = game.Players.LocalPlayer
     local camera = game.Workspace.CurrentCamera
     local closestEnemy = nil
-    local shortestDistance = aimbotRadius
+    local shortestDistance = aimbotRadius -- 2D screen-based distance
+    local maxDistance = 100 -- Set a reasonable max distance in studs for 3D world
 
     for _, player in ipairs(game.Players:GetPlayers()) do
-        if player ~= localPlayer and player.Team ~= localPlayer.Team then
+        if player ~= localPlayer and (not espTeamCheck or player.Team ~= localPlayer.Team) then
             local character = player.Character
             if character and character:FindFirstChild(aimbotTargetPart) then
                 local part = character[aimbotTargetPart]
                 local screenPoint, onScreen = camera:WorldToScreenPoint(part.Position)
-                local mouseLocation = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-                local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - mouseLocation).Magnitude
+                local worldDistance = (part.Position - camera.CFrame.Position).Magnitude -- 3D world distance
 
-                if distance < shortestDistance and onScreen then
-                    shortestDistance = distance
-                    closestEnemy = part
+                -- Check if the target is visible, within the FOV, and within the max distance
+                if onScreen and worldDistance <= maxDistance then
+                    local mouseLocation = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+                    local distanceToCrosshair = (Vector2.new(screenPoint.X, screenPoint.Y) - mouseLocation).Magnitude
+
+                    -- Check if within the FOV radius and prioritize closest
+                    if distanceToCrosshair <= aimbotRadius and distanceToCrosshair < shortestDistance then
+                        shortestDistance = distanceToCrosshair
+                        closestEnemy = part
+                    end
                 end
             end
         end
@@ -223,7 +230,7 @@ Tabs.Aimbot:AddDropdown("TargetPart", {
 
 Tabs.Aimbot:AddToggle("ShowFOV", {
     Title = "Show FOV Circle",
-    Default = false,
+    Default = true,
     Callback = function(state)
         showFOV = state
         fovCircle.Visible = state
