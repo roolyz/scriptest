@@ -2,187 +2,260 @@ local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
--- Create the Fluent Window
 local Window = Fluent:CreateWindow({
-    Title = "Enemy Highlighter",
-    SubTitle = "by dawid",
-    TabWidth = 140, -- Adjusted for mobile
-    Size = UDim2.fromOffset(450, 320), -- Smaller size for mobile
+    Title = "Game Utility Script",
+    SubTitle = "reminisense",
+    TabWidth = 140,
+    Size = UDim2.fromOffset(450, 400),
     Acrylic = true,
     Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl -- Default keybind
+    MinimizeKey = Enum.KeyCode.LeftControl
 })
 
 local Tabs = {
-    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
+    ESP = Window:AddTab({ Title = "ESP", Icon = "" }),
+    Aimbot = Window:AddTab({ Title = "Aimbot", Icon = "" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
-    Aimbot = Window:AddTab({ Title = "Aimbot", Icon = "crosshair" })
 }
 
 -- Variables
-local highlightEnabled = false
-local highlightColor = Color3.fromRGB(255, 0, 0) -- Default Red
-local teamCheck = true
--- Aimbot Variables
-local targetPart = "Head" -- Default to targeting the head
-local fov = 150
-local smoothing = 1
-local teamCheck = false
+local espEnabled = false
+local espColor = Color3.fromRGB(255, 0, 0) -- Default Red
+local espTeamCheck = true
+
 local aimbotEnabled = false
--- FOV Ring
-local FOVring = Drawing.new("Circle")
-FOVring.Visible = true
-FOVring.Thickness = 1.5
-FOVring.Radius = fov
-FOVring.Transparency = 1
-FOVring.Color = Color3.fromRGB(255, 128, 128)
+local aimbotSmoothing = 0.5
+local aimbotTargetPart = "Head"
+local aimbotRadius = 100 -- Default targeting radius (in studs)
+local showFOV = true
+local fovCircleColor = Color3.fromRGB(0, 255, 0) -- Default Green
 
--- Function to manage highlights
-local function applyHighlights()
-    for _, player in ipairs(game.Players:GetPlayers()) do
+local fovCircle = Drawing.new("Circle")
+fovCircle.Visible = false
+fovCircle.Transparency = 1
+fovCircle.Thickness = 2
+fovCircle.Color = fovCircleColor
+fovCircle.Filled = false
+
+local function updateFOVCircle()
+    local camera = Workspace.CurrentCamera
+    local screenSize = camera.ViewportSize
+    fovCircle.Position = Vector2.new(screenSize.X / 2, screenSize.Y / 2)
+    fovCircle.Radius = aimbotRadius
+    fovCircle.Visible = showFOV
+end
+
+game:GetService("RunService").RenderStepped:Connect(function()
+    if showFOV then
+        updateFOVCircle()
+    end
+end)
+
+-- Highlighting Functionality for ESP
+local function createHighlight(player)
+    if not espEnabled or (espTeamCheck and player.Team == game.Players.LocalPlayer.Team) then
+        return
+    end
+
+    local character = player.Character
+    if character and not character:FindFirstChild("ESPHighlight") then
+        local highlight = Instance.new("Highlight")
+        highlight.Parent = character
+        highlight.Name = "ESPHighlight"
+        highlight.FillTransparency = 0.5
+        highlight.OutlineTransparency = 0.2
+        highlight.FillColor = espColor
+        highlight.OutlineColor = Color3.new(1, 1, 1)
+    end
+end
+
+local function updateHighlights()
+    for _, player in pairs(game.Players:GetPlayers()) do
         if player ~= game.Players.LocalPlayer then
-            local character = player.Character
-            if character and character:FindFirstChild("HumanoidRootPart") then
-                local isEnemy = (player.Team ~= game.Players.LocalPlayer.Team) or not teamCheck
-                local highlight = character:FindFirstChildOfClass("Highlight")
+            createHighlight(player)
+        end
+    end
+end
 
-                if highlightEnabled and isEnemy then
-                    if not highlight then
-                        highlight = Instance.new("Highlight")
-                        highlight.Name = "EnemyHighlight"
-                        highlight.Parent = character
-                    end
-                    highlight.FillColor = highlightColor
-                    highlight.OutlineColor = Color3.new(1, 1, 1) -- White outline for contrast
-                    highlight.FillTransparency = 0.5
-                    highlight.OutlineTransparency = 0
-                elseif highlight then
-                    highlight:Destroy()
+game.Players.PlayerAdded:Connect(updateHighlights)
+game.Players.PlayerRemoving:Connect(function(player)
+    local character = player.Character
+    if character and character:FindFirstChild("ESPHighlight") then
+        character.ESPHighlight:Destroy()
+    end
+end)
+
+-- Get Closest Enemy
+local function getClosestEnemy()
+    local localPlayer = game.Players.LocalPlayer
+    local camera = game.Workspace.CurrentCamera
+    local closestEnemy = nil
+    local shortestDistance = aimbotRadius
+
+    for _, player in ipairs(game.Players:GetPlayers()) do
+        if player ~= localPlayer and player.Team ~= localPlayer.Team then
+            local character = player.Character
+            if character and character:FindFirstChild(aimbotTargetPart) then
+                local part = character[aimbotTargetPart]
+                local screenPoint, onScreen = camera:WorldToScreenPoint(part.Position)
+                local mouseLocation = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+                local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - mouseLocation).Magnitude
+
+                if distance < shortestDistance and onScreen then
+                    shortestDistance = distance
+                    closestEnemy = part
                 end
             end
         end
     end
+
+    return closestEnemy
 end
 
--- Highlight updater (runs continuously)
-task.spawn(function()
-    while task.wait(0.1) do
-        if highlightEnabled then
-            applyHighlights()
+-- Aimbot Logic
+local function aimbotStep()
+    if aimbotEnabled then
+        local closestEnemy = getClosestEnemy()
+        if closestEnemy then
+            local camera = game.Workspace.CurrentCamera
+            local targetPosition = closestEnemy.Position
+            local direction = (targetPosition - camera.CFrame.Position).Unit
+            camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, camera.CFrame.Position + direction), aimbotSmoothing)
         end
     end
-end)
-
--- Aimbot functionality
-local function getClosest(cframe)
-    local ray = Ray.new(cframe.Position, cframe.LookVector).Unit
-    local target = nil
-    local mag = math.huge
-
-    for _, v in pairs(game.Players:GetPlayers()) do
-        if v.Character and v.Character:FindFirstChild("Humanoid") and v.Character:FindFirstChild("HumanoidRootPart") and v.Character:FindFirstChild(targetPart) and v ~= game.Players.LocalPlayer and (v.Team ~= game.Players.LocalPlayer.Team or (not teamCheck)) then
-            local magBuf = (v.Character[targetPart].Position - ray:ClosestPoint(v.Character[targetPart].Position)).Magnitude
-            if magBuf < mag then
-                mag = magBuf
-                target = v
-            end
-        end
-    end
-
-    return target
 end
 
--- Main loop
-RunService.RenderStepped:Connect(function()
-    FOVring.Position = workspace.CurrentCamera.ViewportSize / 2
+game:GetService("RunService").RenderStepped:Connect(aimbotStep)
 
-    local cam = workspace.CurrentCamera
-    local zz = workspace.CurrentCamera.ViewportSize / 2
-
-    local curTar = getClosest(cam.CFrame)
-    if curTar then
-        local ssTargetPoint = cam:WorldToScreenPoint(curTar.Character[targetPart].Position)
-        ssTargetPoint = Vector2.new(ssTargetPoint.X, ssTargetPoint.Y)
-        if (ssTargetPoint - zz).Magnitude < fov then
-            workspace.CurrentCamera.CFrame = workspace.CurrentCamera.CFrame:Lerp(CFrame.new(cam.CFrame.Position, curTar.Character[targetPart].Position), smoothing)
-        end
-    end
-end)
-
--- GUI Elements
-Tabs.Main:AddToggle("EnableHighlight", {
-    Title = "Enable Enemy Highlights",
+-- ESP Tab
+Tabs.ESP:AddToggle("EnableESP", {
+    Title = "Enable ESP",
     Default = false,
     Callback = function(state)
-        highlightEnabled = state
+        espEnabled = state
         if not state then
-            -- Remove highlights when disabled
             for _, player in ipairs(game.Players:GetPlayers()) do
-                local character = player.Character
-                if character then
-                    local highlight = character:FindFirstChild("EnemyHighlight")
-                    if highlight then
-                        highlight:Destroy()
-                    end
+                if player.Character and player.Character:FindFirstChild("ESPHighlight") then
+                    player.Character.ESPHighlight:Destroy()
                 end
             end
+        else
+            updateHighlights()
         end
     end
 })
 
-Tabs.Main:AddColorpicker("HighlightColor", {
-    Title = "Highlight Color",
-    Default = highlightColor,
+Tabs.ESP:AddColorpicker("ESPColor", {
+    Title = "ESP Color",
+    Default = espColor,
     Callback = function(newColor)
-        highlightColor = newColor
+        espColor = newColor
+        updateHighlights()
     end
 })
 
-Tabs.Main:AddToggle("TeamCheck", {
-    Title = "Enable Team Check",
+Tabs.ESP:AddToggle("ESPTeamCheck", {
+    Title = "Team Check",
     Default = true,
     Callback = function(state)
-        teamCheck = state
+        espTeamCheck = state
+        updateHighlights()
     end
 })
 
-local Toggle = Tabs.Aimbot:AddToggle("aimbotEnabled", { Title = "Aimbot", Default = false })
-Toggle:OnChanged(function()
-
-    Options.AimbotEnabled:SetValue(false)
-
-
-local Dropdown = Tabs.Aimbot:AddDropdown("targetPart", {
-	Title = "Aimbot Target"
-	Values = { "Head, Body" },
-	multi = false
-	default= 1,
-	})
-	
-	Dropdown:setValue = "Head"
-
-	Dropdown:OnChanged(function(Value)
-	end)
-
--- Notification for GUI Load
-Fluent:Notify({
-    Title = "Enemy Highlighter",
-    Content = "Script Loaded Successfully!",
-    Duration = 5
+-- Aimbot Tab
+Tabs.Aimbot:AddToggle("EnableAimbot", {
+    Title = "Enable Aimbot",
+    Default = false,
+    Callback = function(state)
+        aimbotEnabled = state
+    end
 })
 
--- SaveManager and InterfaceManager Setup
+Tabs.Aimbot:AddSlider("AimbotSmoothing", {
+    Title = "Smoothing",
+    Min = 0,
+    Max = 1,
+    Rounding = 2,
+    Default = aimbotSmoothing,
+    Callback = function(value)
+        aimbotSmoothing = value
+    end
+})
+
+Tabs.Aimbot:AddSlider("AimbotRadius", {
+    Title = "Aimbot Radius",
+    Min = 1,
+    Max = 100,
+    Default = aimbotRadius,
+    Rounding = 0,
+    Callback = function(value)
+        aimbotRadius = value
+        updateFOVCircle()
+    end
+})
+
+Tabs.Aimbot:AddColorpicker("FOVCircleColor", {
+    Title = "FOV Circle Color",
+    Default = fovCircleColor,
+    Callback = function(newColor)
+        fovCircleColor = newColor
+        fovCircle.Color = newColor
+    end
+})
+
+Tabs.Aimbot:AddDropdown("TargetPart", {
+    Title = "Target Part",
+    Values = { "Head", "Torso", "HumanoidRootPart" },
+    Default = aimbotTargetPart,
+    Callback = function(part)
+        aimbotTargetPart = part
+    end
+})
+
+Tabs.Aimbot:AddToggle("ShowFOV", {
+    Title = "Show FOV Circle",
+    Default = true,
+    Callback = function(state)
+        showFOV = state
+        fovCircle.Visible = state
+    end
+})
+
+-- Addons:
+-- SaveManager (Allows you to have a configuration system)
+-- InterfaceManager (Allows you to have an interface management system)
+
+-- Hand the library over to our managers
 SaveManager:SetLibrary(Fluent)
 InterfaceManager:SetLibrary(Fluent)
+
+-- Ignore keys that are used by ThemeManager.
+-- (we don't want configs to save themes, do we?)
 SaveManager:IgnoreThemeSettings()
+
+-- You can add indexes of elements the save manager should ignore
 SaveManager:SetIgnoreIndexes({})
-InterfaceManager:SetFolder("EnemyHighlighter")
-SaveManager:SetFolder("EnemyHighlighter/Configs")
+
+-- use case for doing it this way:
+-- a script hub could have themes in a global folder
+-- and game configs in a separate folder per game
+InterfaceManager:SetFolder("FluentScriptHub")
+SaveManager:SetFolder("FluentScriptHub/specific-game")
+
 InterfaceManager:BuildInterfaceSection(Tabs.Settings)
 SaveManager:BuildConfigSection(Tabs.Settings)
 
--- Auto-load Configs
-SaveManager:LoadAutoloadConfig()
-
--- Finalize GUI
+-- Select the first tab
 Window:SelectTab(1)
+
+-- Notify the user when the script has loaded
+Fluent:Notify({
+    Title = "Fluent",
+    Content = "The script has been loaded.",
+    Duration = 8
+})
+
+-- You can use the SaveManager:LoadAutoloadConfig() to load a config
+-- which has been marked to be one that auto loads!
+SaveManager:LoadAutoloadConfig()
