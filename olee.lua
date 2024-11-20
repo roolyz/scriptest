@@ -47,7 +47,6 @@ local espColor = Color3.fromRGB(255, 0, 0) -- Default Red
 local espTeamCheck = true
 
 
-
 local aimbotEnabled = false
 
 local aimbotSmoothing = 0.5
@@ -105,12 +104,12 @@ end)
 
 
 -- ESP
-local function applyHighlights()
+local function createHighlight()
     for _, player in ipairs(game.Players:GetPlayers()) do
         if player ~= game.Players.LocalPlayer then
             local character = player.Character
             if character and character:FindFirstChild("HumanoidRootPart") then
-                local isEnemy = (player.Team ~= game.Players.LocalPlayer.Team) or not teamCheck
+                local isEnemy = (player.Team ~= game.Players.LocalPlayer.Team) or not espeamCheck
                 local highlight = character:FindFirstChildOfClass("Highlight")
 
                 if highlightEnabled and isEnemy then
@@ -134,8 +133,8 @@ end
 -- Highlight updater (runs continuously)
 task.spawn(function()
     while task.wait(0.1) do
-        if highlightEnabled then
-            applyHighlights()
+        if espEnabled then
+            createHighlights()
         end
     end
 end)
@@ -238,7 +237,7 @@ Tabs.ESP:AddToggle("EnableESP", {
         espEnabled = state
 
         if not state then
-        
+        -- remove esp when turned off
             for _, player in ipairs(game.Players:GetPlayers()) do
                 local character = player.Character
                 if character then
