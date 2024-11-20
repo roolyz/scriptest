@@ -1,10 +1,11 @@
+-- Fluent UI Library
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
 -- Create the Fluent Window
 local Window = Fluent:CreateWindow({
-    Title = "Enemy Highlighter",
+    Title = "Enemy Highlighter & Aimbot",
     SubTitle = "by dawid",
     TabWidth = 140, -- Adjusted for mobile
     Size = UDim2.fromOffset(450, 320), -- Smaller size for mobile
@@ -14,31 +15,21 @@ local Window = Fluent:CreateWindow({
 })
 
 local Tabs = {
-    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
+    Main = Window:AddTab({ Title = "Main", Icon = "" }),
     Aimbot = Window:AddTab({ Title = "Aimbot", Icon = "target" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
--- Variables for Enemy Highlighting
+-- Variables
 local highlightEnabled = false
 local highlightColor = Color3.fromRGB(255, 0, 0) -- Default Red
-local teamCheck = true
-
--- Variables for Aimbot
-local fov = 100
-local fovCircle
-local showFOV = true  -- Default to showing FOV circle
-local SC = Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y / 2)
-local Inset = game:GetService("GuiService"):GetGuiInset()
-local aimbotTarget = "Head" -- Default target is Head
-
--- Function to update FOV circle size
-local function updateFovCircle()
-    if fovCircle then
-        fovCircle.Size = UDim2.new(0, fov * 2, 0, fov * 2) -- Update the FOV circle size
-        fovCircle.Position = UDim2.new(0, SC.X - fov, 0, SC.Y - fov) -- Center the circle on the screen
-    end
-end
+local teamCheckHighlight = true
+local teamCheckAimbot = true
+local fovCircleEnabled = false
+local fovRadius = 1000
+local bodyPart = "Torso"
+local smoothing = 10 -- Smoothing for aimbot movement
+local aimbotEnabled = false -- Flag to keep aimbot always on if toggled
 
 -- Function to manage highlights
 local function applyHighlights()
@@ -46,7 +37,7 @@ local function applyHighlights()
         if player ~= game.Players.LocalPlayer then
             local character = player.Character
             if character and character:FindFirstChild("HumanoidRootPart") then
-                local isEnemy = (player.Team ~= game.Players.LocalPlayer.Team) or not teamCheck
+                local isEnemy = (player.Team ~= game.Players.LocalPlayer.Team) or not teamCheckHighlight
                 local highlight = character:FindFirstChildOfClass("Highlight")
 
                 if highlightEnabled and isEnemy then
@@ -76,122 +67,145 @@ task.spawn(function()
     end
 end)
 
--- Aimbot Functions
-local function ClosestHoe()
-    local MaxDist, Nearest = math.huge
-    for I,V in pairs(game:GetService("Players"):GetPlayers()) do
-        if V ~= game:GetService("Players").LocalPlayer and V.Character and V.Character:FindFirstChild("Humanoid") then
-            local targetPart
-            if aimbotTarget == "Head" then
-                targetPart = V.Character:FindFirstChild("Head")
-            elseif aimbotTarget == "Torso" then
-                targetPart = V.Character:FindFirstChild("HumanoidRootPart") -- Using HumanoidRootPart as torso equivalent
-            end
+-- FOV Circle Drawing
+local fovCircle = nil
+local function updateFovCircle()
+    if fovCircle then
+        fovCircle:Remove() -- Remove the previous circle if exists
+    end
+    if fovCircleEnabled then
+        fovCircle = Drawing.new("Circle")
+        fovCircle.Thickness = 2
+        fovCircle.Color = Color3.fromRGB(255, 255, 255) -- White color for the FOV circle
+        fovCircle.Radius = fovRadius
+        fovCircle.Position = workspace.CurrentCamera.ViewportSize / 2
+        fovCircle.Filled = false
+    end
+end
 
-            if targetPart then
-                local Pos, Vis = workspace.CurrentCamera:WorldToScreenPoint(targetPart.Position)
-                if Vis then
-                    local Diff = math.sqrt((Pos.X - SC.X) ^ 2 + (Pos.Y + Inset.Y - SC.Y) ^ 2)
-                    if Diff < MaxDist and Diff < fov then
-                        MaxDist = Diff
-                        Nearest = V
+-- Update FOV circle on slider change
+Tabs.Aimbot:AddSlider("FOV", {
+    Title = "Aimbot FOV",
+    Min = 100,
+    Max = 1000,
+    Default = 1000,
+    Callback = function(value)
+        fovRadius = value
+        updateFovCircle()
+    end
+})
+
+Tabs.Aimbot:AddToggle("ShowFOV", {
+    Title = "Show FOV Circle",
+    Default = false,
+    Callback = function(state)
+        fovCircleEnabled = state
+        updateFovCircle()
+    end
+})
+
+-- Dropdown to choose target body part (Head/Torso)
+Tabs.Aimbot:AddDropdown("BodyPart", {
+    Title = "Aimbot Body Part",
+    Default = "Torso",
+    List = { "Head", "Torso" },
+    Callback = function(selected)
+        bodyPart = selected
+    end
+})
+
+-- Function for Aimbot (aims at closest enemy within FOV)
+local function aimAtTarget(target)
+    local camera = workspace.CurrentCamera
+    local mouse = game.Players.LocalPlayer:GetMouse()
+    local targetPos = target.Character[bodyPart].Position
+    local aimAt = camera:WorldToScreenPoint(targetPos)
+
+    -- Calculate the delta to move the mouse
+    local deltaX = aimAt.X - mouse.X
+    local deltaY = aimAt.Y - mouse.Y
+
+    -- Smooth aimbot movement
+    mousemoveabs(mouse.X + deltaX / smoothing, mouse.Y + deltaY / smoothing)
+end
+
+-- Helper function to simulate mouse movement (for aimbot)
+function mousemoveabs(x, y)
+    -- This function moves the mouse based on screen coordinates, creating a smoother aimbot effect
+    game:GetService("VirtualUser"):ClickButton1(Vector2.new(x, y))
+end
+
+-- Function to get the closest enemy (Aimbot logic)
+local function closestEnemy()
+    local maxDist, nearest = math.huge
+    for _, player in pairs(game:GetService("Players"):GetPlayers()) do
+        if player ~= game:GetService("Players").LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") then
+            if (player.Team ~= game:GetService("Players").LocalPlayer.Team or not teamCheckAimbot) then
+                local pos, vis = workspace.CurrentCamera:WorldToScreenPoint(player.Character[bodyPart].Position)
+                if vis then
+                    local dist = math.sqrt((pos.X - workspace.CurrentCamera.ViewportSize.X / 2) ^ 2 + (pos.Y - workspace.CurrentCamera.ViewportSize.Y / 2) ^ 2)
+                    if dist < maxDist and dist < fovRadius then
+                        maxDist = dist
+                        nearest = player
                     end
                 end
             end
         end
     end
-    return Nearest
+    return nearest
 end
 
+-- Always active aimbot (no need for key press)
 game:GetService("RunService").RenderStepped:Connect(function()
-    if showFOV and fovCircle then
-        updateFovCircle() -- Update the FOV circle size every frame
+    if highlightEnabled then
+        applyHighlights() -- Apply highlights if enabled
+    end
+    if aimbotEnabled then
+        local target = closestEnemy()
+        if target then
+            aimAtTarget(target)
+        end
     end
 end)
 
--- GUI Elements for Enemy Highlighting
+-- GUI elements for highlighting and aimbot settings
 Tabs.Main:AddToggle("EnableHighlight", {
     Title = "Enable Enemy Highlights",
     Default = false,
     Callback = function(state)
         highlightEnabled = state
-        if not state then
-            -- Remove highlights when disabled
-            for _, player in ipairs(game.Players:GetPlayers()) do
-                local character = player.Character
-                if character then
-                    local highlight = character:FindFirstChild("EnemyHighlight")
-                    if highlight then
-                        highlight:Destroy()
-                    end
-                end
-            end
-        end
     end
 })
 
-Tabs.Main:AddColorpicker("HighlightColor", {
+Tabs.Aimbot:AddToggle("EnableAimbot", {
+    Title = "Enable Aimbot",
+    Default = false,
+    Callback = function(state)
+        aimbotEnabled = state
+    end
+})
+
+Tabs.Main:AddColorPicker("HighlightColor", {
     Title = "Highlight Color",
-    Default = highlightColor,
-    Callback = function(newColor)
-        highlightColor = newColor
+    Default = Color3.fromRGB(255, 0, 0),
+    Callback = function(color)
+        highlightColor = color
     end
 })
 
-Tabs.Main:AddToggle("TeamCheck", {
-    Title = "Enable Team Check",
+Tabs.Settings:AddToggle("TeamCheckHighlight", {
+    Title = "Team Check for Highlights",
     Default = true,
     Callback = function(state)
-        teamCheck = state
+        teamCheckHighlight = state
     end
 })
 
--- GUI Elements for Aimbot
-Tabs.Aimbot:AddToggle("ShowFOV", {
-    Title = "Show FOV Circle",
+Tabs.Settings:AddToggle("TeamCheckAimbot", {
+    Title = "Team Check for Aimbot",
     Default = true,
     Callback = function(state)
-        showFOV = state
-        if state then
-            -- Show FOV circle
-            if not fovCircle then
-                fovCircle = Instance.new("Frame")
-                fovCircle.Parent = game:GetService("CoreGui")
-                fovCircle.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Red color
-                fovCircle.BorderSizePixel = 0
-                fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
-                fovCircle.Position = UDim2.new(0, SC.X - fov, 0, SC.Y - fov) -- Center the circle
-                fovCircle.Size = UDim2.new(0, fov * 2, 0, fov * 2)
-                fovCircle.ZIndex = 100
-                fovCircle.BackgroundTransparency = 0.5
-            end
-        else
-            -- Hide FOV circle
-            if fovCircle then
-                fovCircle:Destroy()
-                fovCircle = nil
-            end
-        end
-    end
-})
-
-Tabs.Aimbot:AddSlider("FOV", {
-    Title = "Aimbot FOV",
-    Min =  1,
-    Max = 100,
-    Default = fov,
-    Callback = function(value)
-        fov = value
-        updateFovCircle()  -- Update the circle size when FOV changes
-    end
-})
-
-Tabs.Aimbot:AddDropdown("AimbotTarget", {
-    Title = "Aimbot Target",
-    Options = {"Head", "Torso"},
-    Default = 1, -- Default to "Head"
-    Callback = function(selected)
-        aimbotTarget = selected
+        teamCheckAimbot = state
     end
 })
 
