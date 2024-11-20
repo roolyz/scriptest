@@ -223,7 +223,7 @@ Tabs.Aimbot:AddDropdown("TargetPart", {
 
 Tabs.Aimbot:AddToggle("ShowFOV", {
     Title = "Show FOV Circle",
-    Default = true,
+    Default = false,
     Callback = function(state)
         showFOV = state
         fovCircle.Visible = state
