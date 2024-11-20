@@ -15,10 +15,11 @@ local Window = Fluent:CreateWindow({
 
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "" }),
+    Aimbot = Window:AddTab({ Title = "Aimbot", Icon = "target" }), -- New Aimbot tab
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
--- Variables
+-- Variables for Highlights
 local highlightEnabled = false
 local highlightColor = Color3.fromRGB(255, 0, 0) -- Default Red
 local teamCheck = true
@@ -59,7 +60,7 @@ task.spawn(function()
     end
 end)
 
--- GUI Elements
+-- GUI Elements for Main Tab
 Tabs.Main:AddToggle("EnableHighlight", {
     Title = "Enable Enemy Highlights",
     Default = false,
@@ -96,51 +97,82 @@ Tabs.Main:AddToggle("TeamCheck", {
     end
 })
 
--- Mobile Keybind Button
-local keybindButton = Instance.new("TextButton")
-keybindButton.Size = UDim2.new(0, 100, 0, 50)
-keybindButton.Position = UDim2.new(0.05, 0, 0.05, 0) -- Top-left corner
-keybindButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-keybindButton.Text = "Key: LeftCtrl" -- Show default keybind
-keybindButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-keybindButton.Font = Enum.Font.SourceSansBold
-keybindButton.TextSize = 18
-keybindButton.Parent = game.CoreGui
+-- Variables for Aimbot
+local aimbotEnabled = false
+local fov = 500
+local fovColor = Color3.fromRGB(255, 255, 0) -- Default Yellow
+local teamCheckAimbot = true
 
-keybindButton.MouseButton1Click:Connect(function()
-    Window:SetVisible(not Window:GetVisible())
-end)
+-- Aimbot Logic
+local function getClosestTarget()
+    local nearest = nil
+    local shortestDistance = math.huge
 
--- Make button draggable
-local dragging
-local dragStart
-local startPos
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player ~= game.Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            if teamCheckAimbot and player.Team == game.Players.LocalPlayer.Team then
+                continue
+            end
 
-keybindButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = keybindButton.Position
+            local screenPoint, onScreen = workspace.CurrentCamera:WorldToScreenPoint(player.Character.HumanoidRootPart.Position)
+            if onScreen then
+                local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - workspace.CurrentCamera.ViewportSize / 2).Magnitude
+                if distance < shortestDistance and distance < fov then
+                    nearest = player
+                    shortestDistance = distance
+                end
+            end
+        end
+    end
+    return nearest
+end
+
+-- Aimbot Updater
+task.spawn(function()
+    while task.wait() do
+        if aimbotEnabled then
+            local target = getClosestTarget()
+            if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+                workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, target.Character.HumanoidRootPart.Position)
+            end
+        end
     end
 end)
 
-keybindButton.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - dragStart
-        keybindButton.Position = UDim2.new(
-            startPos.X.Scale,
-            startPos.X.Offset + delta.X,
-            startPos.Y.Scale,
-            startPos.Y.Offset + delta.Y
-        )
+-- GUI Elements for Aimbot Tab
+Tabs.Aimbot:AddToggle("EnableAimbot", {
+    Title = "Enable Aimbot",
+    Default = false,
+    Callback = function(state)
+        aimbotEnabled = state
     end
-end)
+})
 
-keybindButton.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
+Tabs.Aimbot:AddSlider("FOV", {
+    Title = "Aimbot FOV",
+    Min = 100,
+    Max = 1000,
+    Default = fov,
+    Callback = function(value)
+        fov = value
     end
-end)
+})
+
+Tabs.Aimbot:AddToggle("TeamCheckAimbot", {
+    Title = "Enable Team Check (Aimbot)",
+    Default = true,
+    Callback = function(state)
+        teamCheckAimbot = state
+    end
+})
+
+Tabs.Aimbot:AddColorpicker("FOVColor", {
+    Title = "FOV Color",
+    Default = fovColor,
+    Callback = function(newColor)
+        fovColor = newColor
+    end
+})
 
 -- Notification for GUI Load
 Fluent:Notify({
