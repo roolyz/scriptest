@@ -130,7 +130,7 @@ end
 game:GetService("RunService").RenderStepped:Connect(aimbotStep)
 
 -- ESP Tab
-Tabs.ESP:AddToggle("highlightEnabled", {
+Tabs.ESP:AddToggle("EnableHighlight", {
     Title = "Enable ESP",
     Default = false,
     Callback = function(state)
@@ -147,7 +147,7 @@ Tabs.ESP:AddToggle("highlightEnabled", {
     end
 })
 
-Tabs.ESP:AddColorpicker("highlightColor", {
+Tabs.ESP:AddColorpicker("HighlightColor", {
     Title = "ESP Color",
     Default = espColor,
     Callback = function(newColor)
@@ -156,7 +156,7 @@ Tabs.ESP:AddColorpicker("highlightColor", {
     end
 })
 
-Tabs.ESP:AddToggle("teamCheck", {
+Tabs.ESP:AddToggle("TeamCheck", {
     Title = "Team Check",
     Default = true,
     Callback = function(state)
