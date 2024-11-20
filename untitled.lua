@@ -140,7 +140,9 @@ local function closestEnemy()
     local maxDist, nearest = math.huge
     for _, player in pairs(game:GetService("Players"):GetPlayers()) do
         if player ~= game:GetService("Players").LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") then
-            if (player.Team ~= game:GetService("Players").LocalPlayer.Team or not teamCheckAimbot) then
+            -- Single team check for both highlight and aimbot
+            local isEnemy = (player.Team ~= game:GetService("Players").LocalPlayer.Team) or not teamCheckAimbot
+            if isEnemy then
                 local pos, vis = workspace.CurrentCamera:WorldToScreenPoint(player.Character[bodyPart].Position)
                 if vis then
                     local dist = math.sqrt((pos.X - workspace.CurrentCamera.ViewportSize.X / 2) ^ 2 + (pos.Y - workspace.CurrentCamera.ViewportSize.Y / 2) ^ 2)
@@ -193,16 +195,18 @@ Tabs.Main:AddColorPicker("HighlightColor", {
     end
 })
 
+-- Team Check for Highlights
 Tabs.Settings:AddToggle("TeamCheckHighlight", {
-    Title = "Team Check for Highlights",
+    Title = "Enable Team Check for Highlights",
     Default = true,
     Callback = function(state)
         teamCheckHighlight = state
     end
 })
 
+-- Team Check for Aimbot
 Tabs.Settings:AddToggle("TeamCheckAimbot", {
-    Title = "Team Check for Aimbot",
+    Title = "Enable Team Check for Aimbot",
     Default = true,
     Callback = function(state)
         teamCheckAimbot = state
