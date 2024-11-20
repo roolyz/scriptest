@@ -3,7 +3,7 @@ local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/d
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
 local Window = Fluent:CreateWindow({
-    Title = "Game Utility Script",
+    Title = "Universal Aimbot and ESP",
     SubTitle = "reminisense",
     TabWidth = 140,
     Size = UDim2.fromOffset(450, 400),
@@ -26,8 +26,8 @@ local espTeamCheck = true
 local aimbotEnabled = false
 local aimbotSmoothing = 0.5
 local aimbotTargetPart = "Head"
-local aimbotRadius = 100 -- Default targeting radius (in studs)
-local showFOV = true
+local aimbotRadius = 35 -- Default targeting radius (in studs)
+local showFOV = false
 local fovCircleColor = Color3.fromRGB(0, 255, 0) -- Default Green
 
 local fovCircle = Drawing.new("Circle")
@@ -159,7 +159,18 @@ Tabs.ESP:AddToggle("ESPTeamCheck", {
     Default = true,
     Callback = function(state)
         espTeamCheck = state
-        updateHighlights()
+        if not state then
+        
+        for _, player in ipairs(game.Players:GetPlayers()) do
+                local character = player.Character
+                if character then
+                    local highlight = character:FindFirstChild("ESPTeamCheck")
+                    if highlight then
+                        highlight:Destroy()
+                    end
+                end
+            end
+        end
     end
 })
 
